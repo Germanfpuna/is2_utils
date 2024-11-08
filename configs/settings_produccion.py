@@ -12,7 +12,7 @@ Configuración de la base de datos.
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'pruebacms',
+        'NAME': 'cms',
         'USER': 'postgres',
         'PASSWORD': '99583854',
         'HOST': 'db',
