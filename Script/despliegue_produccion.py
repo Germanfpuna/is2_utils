@@ -121,7 +121,7 @@ DISQUS_ACCESS_TOKEN="51b66d8bd05f4c3b94ece898a0a89159"
     os.chdir(current_path)
 
 
-def configure_ngingx ():
+def configure_nginx ():
     # Define la ruta del proyecto
     project_root = os.popen('pwd').read().strip()
 
