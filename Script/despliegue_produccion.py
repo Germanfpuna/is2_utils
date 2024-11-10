@@ -12,6 +12,7 @@ def check_installation(command):
         print(f"{command} no está instalado o no es accesible en PATH.")
         sys.exit(1)
 
+
 def clone_and_checkout_repo():
     """Clone the repository and checkout the specified tag."""
     global tag
@@ -69,7 +70,6 @@ def clone_and_checkout_repo():
     os.chdir(current_path)
 
 
-
 def check_docker_compose():
     """Check if Docker Compose is installed and running."""
     try:
@@ -85,6 +85,7 @@ def check_docker_compose():
     except subprocess.CalledProcessError:
         print("Docker Compose no está instalado. Instalando...")
         sys.exit(1)
+
 
 def prepare_env_file():
     """Prepare the .env file with environment variables."""
@@ -118,6 +119,34 @@ DISQUS_ACCESS_TOKEN="51b66d8bd05f4c3b94ece898a0a89159"
         f.write(env_content)
     
     os.chdir(current_path)
+
+
+def configure_ngingx ():
+    # Define la ruta del proyecto
+    project_root = os.popen('pwd').read().strip()
+
+    # Define el archivo nginx.conf
+    nginx_conf_path = 'ruta/a/tu/nginx.conf'
+    # Busca el archivo nginx.conf en el directorio actual
+    for root, dirs, files in os.walk(project_root):
+        if 'nginx.conf' in files:
+            nginx_conf_path = os.path.join(root, 'nginx.conf')
+            break
+    else:
+        raise FileNotFoundError('No se encontró el archivo nginx.conf en el directorio actual')
+
+    # Lee el contenido del archivo nginx.conf
+    with open(nginx_conf_path, 'r') as file:
+        nginx_conf = file.read()
+
+    # Reemplaza $document_root con la ruta del proyecto
+    nginx_conf = nginx_conf.replace('$document_root', project_root)
+
+    # Escribe el contenido modificado de nuevo en el archivo nginx.conf
+    with open(nginx_conf_path, 'w') as file:
+        file.write(nginx_conf)
+
+    print(f'La ruta del proyecto ha sido configurada en {nginx_conf_path}')
 
 
 def download_docker_files():
@@ -274,7 +303,6 @@ def setup_virtualenv():
     os.chdir(current_path)
 
 
-
 def migrate_database():
     
     current_path = Path.cwd()
@@ -326,6 +354,7 @@ def migrate_database():
         sys.exit(1)
 
     os.chdir(current_path)
+
 
 def collect_static_files():
     
