@@ -113,6 +113,12 @@ EMAIL_DEBUG="True"
 DISQUS_API_KEY="gwyxKGnqPlAaj1q5S9qHSYPT3GLG8hWjycH4F1xhVMfjXNB1m63iIQ9qc7WN4qP2"
 DISQUS_SECRET_API_KEY="Ho5WZ0XMPKYf1LyYwr046Iyp55wi9Zs80OCmP6iN0E1EAvv10CZARgBrHHdRdNsb"
 DISQUS_ACCESS_TOKEN="51b66d8bd05f4c3b94ece898a0a89159"
+
+DEPLOY_DATABASE_NAME=cms
+DEPLOY_DATABASE_USER=postgres
+DEPLOY_DATABASE_PASSWORD=99583854
+DEPLOY_DATABASE_HOST=db
+DEPLOY_DATABASE_PORT=5432
 """
     
     with open('.env', 'w') as f:
@@ -150,32 +156,41 @@ def configure_nginx ():
 
 
 def download_docker_files():
-        # descarga los componentes docker principales
-        docker_compose_url = 'https://raw.githubusercontent.com/Germanfpuna/is2_utils/refs/heads/main/docker/docker-compose.yml'
-        dockerfile_url = 'https://raw.githubusercontent.com/Germanfpuna/is2_utils/refs/heads/main/docker/Dockerfile'
-        nginx_conf_url = 'https://raw.githubusercontent.com/Germanfpuna/is2_utils/refs/heads/main/docker/nginx.conf'
-        
-        docker_compose_path = Path('docker-compose.yml')
-        dockerfile_path = Path('Dockerfile')
-        nginx_conf_path = Path('nginx.conf')
-        
-        if not dockerfile_path.exists():
+    # descarga los componentes docker principales
+    docker_compose_url = 'https://raw.githubusercontent.com/Germanfpuna/is2_utils/refs/heads/main/docker/docker-compose.yml'
+    dockerfile_url = 'https://raw.githubusercontent.com/Germanfpuna/is2_utils/refs/heads/main/docker/Dockerfile'
+    nginx_conf_url = 'https://raw.githubusercontent.com/Germanfpuna/is2_utils/refs/heads/main/docker/nginx.conf'
+    
+    docker_compose_path = Path('docker-compose.yml')
+    dockerfile_path = Path('Dockerfile')
+    nginx_conf_path = Path('nginx.conf')
+    
+    if not dockerfile_path.exists():
+        subprocess.run(['curl', '-o', str(dockerfile_path), dockerfile_url], check=True)
+        print("Archivo Dockerfile descargado correctamente.")
+    else:
+        print("Archivo Dockerfile ya existe. Desea remplazarlo?(s/n):")
+        replace = True if ('s' in input().lower()) else False
+        if replace :
             subprocess.run(['curl', '-o', str(dockerfile_path), dockerfile_url], check=True)
-            print("Archivo Dockerfile descargado correctamente.")
-        else:
-            print("Archivo Dockerfile ya existe.")
-        
-        if not nginx_conf_path.exists():
+    
+    if not nginx_conf_path.exists():
+        subprocess.run(['curl', '-o', str(nginx_conf_path), nginx_conf_url], check=True)
+        print("Archivo nginx.conf descargado correctamente.")
+    else:
+        print("Archivo nginx.conf ya existe. Desea remplazarlo?(s/n):")
+        replace = True if ('s' in input().lower()) else False
+        if replace:
             subprocess.run(['curl', '-o', str(nginx_conf_path), nginx_conf_url], check=True)
-            print("Archivo nginx.conf descargado correctamente.")
-        else:
-            print("Archivo nginx.conf ya existe.")
-        
-        if not docker_compose_path.exists():
+
+    if not docker_compose_path.exists():
+        subprocess.run(['curl', '-o', str(docker_compose_path), docker_compose_url], check=True)
+        print("Archivo docker-compose.yml descargado correctamente.")
+    else:
+        print("Archivo docker-compose.yml ya existe. Desea remplazarlo?(s/n):")
+        replace = True if ('s' in input().lower()) else False
+        if replace:
             subprocess.run(['curl', '-o', str(docker_compose_path), docker_compose_url], check=True)
-            print("Archivo docker-compose.yml descargado correctamente.")
-        else:
-            print("Archivo docker-compose.yml ya existe.")
 
 
 def set_settings_file():
@@ -189,7 +204,10 @@ def set_settings_file():
         subprocess.run(['curl', '-o', str(settings_production_path), settings_production_url], check=True)
         print("Archivo settings_produccion.py descargado correctamente.")
     else:
-        print("Archivo settings_produccion.py ya existe.")
+        print("Archivo settings_produccion.py ya existe. Desea remplazarlo?(s/n):")
+        replace = True if ('s' in input().lower()) else False
+        if replace:
+            subprocess.run(['curl', '-o', str(settings_production_path), settings_production_url], check=True)
     
     os.chdir(current_path)
 
@@ -214,7 +232,8 @@ def build_up_docker ():
 
     # Levantar los servicios de Docker
     print(f"Ruta actual: {os.getcwd()}")
-    subprocess.run(['docker','compose', 'up','-d'], check=True)
+    configure_nginx()
+    subprocess.run(['docker', 'compose', 'up', '-d'], check=True)
     
     os.chdir(current_path)
 
@@ -345,7 +364,7 @@ def migrate_database():
         print("\nPreparando migraciones...")
         subprocess.run(['../venv/bin/python', 'manage.py', 'makemigrations'], check=True)
 
-        subprocess.run(['docker', 'compose', 'exec', 'web', 'python', 'manage.py', 'migrate'], check=True)
+        subprocess.run(['docker', 'compose', 'exec', 'web', 'python', 'manage.py', 'migrate', '--settings=MiProyecto.settings_produccion'], check=True)
         print("Migraciones aplicadas correctamente.")
         
     except subprocess.CalledProcessError as e:
@@ -362,6 +381,7 @@ def collect_static_files():
     
     current_path = Path.cwd()
     os.chdir(current_path / 'Proyecto_CMS_IS2' / 'MiProyecto')
+
     print('c:')
     print(Path.cwd())
     print('c:')
@@ -386,7 +406,6 @@ def populate_database():
                 subprocess.run(['docker', 'compose', 'exec', 'web', 'python', 'manage.py', 'setup_roles'])
         elif tag == "v1.1" or tag == "v3.0":
             if Path('Pagina_CMS/management/commands/setup_roles.py').exists() and tag == "v1.1":
-                # subprocess.run(['docker', 'compose', 'exec', 'web', 'python', 'manage.py', 'setup_roles'])
                 subprocess.run(['docker', 'compose', 'exec', 'web', 'python', 'manage.py', 'populate'])
 
             if Path('Pagina_CMS/management/commands/setup_roles.py').exists() and tag == "v3.0":
@@ -434,4 +453,4 @@ if __name__ == "__main__":
     # Paso 8: Poblar la base de datos según elección del usuario
     populate_database()
 
-    print("\nPuedes acceder al sitio desde: http://localhost")
+    print("\nPuedes acceder al sitio desde: http://localhost:8000")
