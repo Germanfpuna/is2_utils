@@ -3,6 +3,16 @@ import sys
 import os
 from pathlib import Path
 tag = 'tag'
+db_name = 'cms'
+db_user = 'postgres'
+db_password = '99583854'
+db_host = 'localhost'
+db_port = '5432'
+deploy_db_name = 'cms'
+deploy_db_user = 'postgres'
+deploy_db_password = '99583854'
+deploy_db_host = 'db'
+deploy_db_port = '5432'
 
 def check_installation(command):
     """Check if a command is installed."""
@@ -91,15 +101,28 @@ def prepare_env_file():
     """Prepare the .env file with environment variables."""
     current_path = Path.cwd()
     os.chdir(current_path / 'Proyecto_CMS_IS2' / 'MiProyecto')
-    
-    env_content = """
+
+    global db_name, db_user, db_password, db_port, deploy_db_name, deploy_db_user, deploy_db_password, deploy_db_port
+    use_default_db = input("¿Deseas usar la configuración de base de datos por defecto? (s/n): ").strip().lower()
+    if use_default_db != 's':
+        db_name = input(f"Ingresa el nombre de la base de datos [{db_name}]: ").strip() or db_name
+        db_user = input(f"Ingresa el usuario de la base de datos [{db_user}]: ").strip() or db_user
+        db_password = input(f"Ingresa la contraseña de la base de datos [{db_password}]: ").strip() or db_password
+        db_port = input(f"Ingresa el puerto de la base de datos [{db_port}]: ").strip() or db_port
+
+        deploy_db_name = db_name
+        deploy_db_user = db_user
+        deploy_db_password = db_password
+        deploy_db_port = db_port
+
+    env_content = f"""
 SECRET_KEY=django-insecure-21yk35cuf*abmuh$32r6r7#vq(%^yxbj17ho16n=*x4+@)34a6
 #configuraciones de la base de datos
-DATABASE_HOST=localhost
-DATABASE_PORT=5432
-DATABASE_NAME=cms
-DATABASE_USER=postgres
-DATABASE_PASSWORD=99583854
+DATABASE_HOST={db_host}
+DATABASE_PORT={db_port}
+DATABASE_NAME={db_name}
+DATABASE_USER={db_user}
+DATABASE_PASSWORD={db_password}
 
 EMAIL_BACKEND="django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST="smtp.gmail.com"
@@ -114,18 +137,25 @@ DISQUS_API_KEY="gwyxKGnqPlAaj1q5S9qHSYPT3GLG8hWjycH4F1xhVMfjXNB1m63iIQ9qc7WN4qP2
 DISQUS_SECRET_API_KEY="Ho5WZ0XMPKYf1LyYwr046Iyp55wi9Zs80OCmP6iN0E1EAvv10CZARgBrHHdRdNsb"
 DISQUS_ACCESS_TOKEN="51b66d8bd05f4c3b94ece898a0a89159"
 
-DEPLOY_DATABASE_NAME=cms
-DEPLOY_DATABASE_USER=postgres
-DEPLOY_DATABASE_PASSWORD=99583854
-DEPLOY_DATABASE_HOST=db
-DEPLOY_DATABASE_PORT=5432
+DEPLOY_DATABASE_NAME={deploy_db_name}
+DEPLOY_DATABASE_USER={deploy_db_user}
+DEPLOY_DATABASE_PASSWORD={deploy_db_password}
+DEPLOY_DATABASE_HOST={deploy_db_host}
+DEPLOY_DATABASE_PORT={deploy_db_port}
+
+STRIPE_SECRET_KEY='sk_test_51Q1vMID8kh3ODc317pBnDyS7BfdX8t58HpEch8dqExzL3fEl6HWtjjCycWG2N82NJGKpPQC9V8fsGCq59A3XWc1L00kpHTVczR'
+STRIPE_PUBLISHABLE_KEY='pk_test_51Q1vMID8kh3ODc31aWpt5h4gmz8z2iJJwh7F6YP864uCCh63m7Ciy56l16sWPIdLafBLxn5MnFt1OOS3EVqPu9lB00FtTswnvS'
+WEBHOOK_ENDPOINT_SECRET='whsec_113f7065b68775934074e83acdf247dc4b5bfdaa1585d7f254d8b9680f387b8e'
+
+AWS_ACCESS_KEY_ID='AKIA5MSUBLZANYMZ6IMP'
+AWS_SECRET_ACCESS_KEY='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'
+
 """
     
     with open('.env', 'w') as f:
         f.write(env_content)
     
     os.chdir(current_path)
-
 
 def configure_nginx ():
     # Define la ruta del proyecto
@@ -169,8 +199,7 @@ def download_docker_files():
         subprocess.run(['curl', '-o', str(dockerfile_path), dockerfile_url], check=True)
         print("Archivo Dockerfile descargado correctamente.")
     else:
-        print("Archivo Dockerfile ya existe. Desea remplazarlo?(s/n):")
-        replace = True if ('s' in input().lower()) else False
+        replace = True if ('s' in input("\n\nArchivo Dockerfile ya existe. Desea remplazarlo?(s/n):").lower()) else False
         if replace :
             subprocess.run(['curl', '-o', str(dockerfile_path), dockerfile_url], check=True)
     
@@ -178,8 +207,7 @@ def download_docker_files():
         subprocess.run(['curl', '-o', str(nginx_conf_path), nginx_conf_url], check=True)
         print("Archivo nginx.conf descargado correctamente.")
     else:
-        print("Archivo nginx.conf ya existe. Desea remplazarlo?(s/n):")
-        replace = True if ('s' in input().lower()) else False
+        replace = True if ('s' in input("\n\nArchivo nginx.conf ya existe. Desea remplazarlo?(s/n):").lower()) else False
         if replace:
             subprocess.run(['curl', '-o', str(nginx_conf_path), nginx_conf_url], check=True)
 
@@ -187,8 +215,7 @@ def download_docker_files():
         subprocess.run(['curl', '-o', str(docker_compose_path), docker_compose_url], check=True)
         print("Archivo docker-compose.yml descargado correctamente.")
     else:
-        print("Archivo docker-compose.yml ya existe. Desea remplazarlo?(s/n):")
-        replace = True if ('s' in input().lower()) else False
+        replace = True if ('s' in input("\n\nArchivo docker-compose.yml ya existe. Desea remplazarlo?(s/n):").lower()) else False
         if replace:
             subprocess.run(['curl', '-o', str(docker_compose_path), docker_compose_url], check=True)
 
@@ -227,12 +254,14 @@ def build_up_docker ():
             subprocess.run(['cp', str(parent_req_file), '.'], check=True)
             print(f"Archivo {req_file} copiado correctamente desde el directorio superior.")
             break
-
+    
+    # desacargar el archivo de configuracion para produccion
     set_settings_file()
 
-    # Levantar los servicios de Docker
-    print(f"Ruta actual: {os.getcwd()}")
+    # ajustar las configuraciones del nginx
     configure_nginx()
+
+    # Levantar los servicios de Docker
     subprocess.run(['docker', 'compose', 'up', '-d'], check=True)
     
     os.chdir(current_path)
@@ -340,29 +369,29 @@ def migrate_database():
         # Verificar si la base de datos 'cms' existe dentro del contenedor 'db'
         db_check_command = [
             'docker', 'compose', 'exec', '-T', 'db', 'psql', '-U', 'postgres', '-tc',
-            "SELECT 1 FROM pg_database WHERE datname = 'cms';"
+            f"SELECT 1 FROM pg_database WHERE datname = '{deploy_db_name}';"
         ]
         result = subprocess.run(db_check_command, capture_output=True, text=True)
 
         if '1' in result.stdout:
             # Si la base de datos existe, eliminar el esquema 'public'
             drop_schema_command = [
-                'docker', 'compose', 'exec', '-T', 'db', 'psql', '-U', 'postgres', '-d', 'cms', '-c',
+                'docker', 'compose', 'exec', '-T', 'db', 'psql', '-U', 'postgres', '-d', deploy_db_name, '-c',
                 "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
             ]
             subprocess.run(drop_schema_command, check=True)
-            print("Esquema 'public' eliminado y recreado en la base de datos 'cms'.")
+            print("Esquema 'public' eliminado y recreado en la base de datos " + deploy_db_name + ".")
         else:
             # Si la base de datos no existe, crearla
             create_db_command = [
                 'docker', 'compose', 'exec', '-T', 'db', 'psql', '-U', 'postgres', '-c',
-                "CREATE DATABASE cms;"
+                f"CREATE DATABASE {deploy_db_name};"
             ]
             subprocess.run(create_db_command, check=True)
-            print("Base de datos 'cms' creada.")
+            print(f"Base de datos {deploy_db_name} creada.")
 
         print("\nPreparando migraciones...")
-        subprocess.run(['../venv/bin/python', 'manage.py', 'makemigrations'], check=True)
+        subprocess.run(['../venv/bin/python', 'manage.py', 'makemigrations', '--settings=MiProyecto.settings_produccion'], check=True)
 
         subprocess.run(['docker', 'compose', 'exec', 'web', 'python', 'manage.py', 'migrate', '--settings=MiProyecto.settings_produccion'], check=True)
         print("Migraciones aplicadas correctamente.")
@@ -399,7 +428,7 @@ def populate_database():
     print("=== Poblando base de datos ===")
     os.chdir(current_path / 'Proyecto_CMS_IS2' / 'MiProyecto')
     try:
-        if tag == "v4.0" or tag == "v5.0":
+        if tag == "v4.0" or tag == "v5.0" or tag == "v6.0" or tag == "sprint6":
             if Path('Pagina_CMS/management/commands/setup.py').exists():
                 subprocess.run(['docker', 'compose', 'exec', 'web', 'python', 'manage.py', 'setup'])
             else:
@@ -418,6 +447,7 @@ def populate_database():
 
     os.chdir(current_path)
 
+
 if __name__ == "__main__":
     if os.name != 'posix':
         print("Este script solo puede ejecutarse en sistemas operativos basados en Unix (Linux/Mac).")
@@ -432,12 +462,12 @@ if __name__ == "__main__":
     # Paso 2: Clonar el repositorio y seleccionar el tag
     clone_and_checkout_repo()
 
+    # Paso 4: Preparar archivo .env
+    prepare_env_file()
+
     subprocess.run(['sleep', '1'])
     # Paso 3: Comprobar que Docker Compose esté instalado y corriendo
     check_docker_compose()
-
-    # Paso 4: Preparar archivo .env
-    prepare_env_file()
 
     # Paso 5: Recolectar archivos estáticos
     collect_static_files()
